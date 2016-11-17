@@ -1,0 +1,66 @@
+% \documentclass{book}
+
+\documentclass[12pt]{article}
+\usepackage[pdfborder={0 0 0.5 [3 2]}]{hyperref}%
+\usepackage[left=1in,right=1in,top=1in,bottom=1in]{geometry}%
+\usepackage[shortalphabetic]{amsrefs}%
+\usepackage{amsmath}
+\usepackage{enumerate}
+\usepackage{enumitem}
+\usepackage{amssymb}                
+\usepackage{amsmath}                
+\usepackage{amsfonts}
+\usepackage{amsthm}
+\usepackage{bbm}
+\usepackage[table,xcdraw]{xcolor}
+\usepackage{tikz}
+\usepackage{float}
+\usepackage{booktabs}
+\usepackage{svg}
+\usepackage{mathtools}
+\usepackage{cool}
+\usepackage{url}
+\usepackage{graphicx,epsfig}
+\usepackage{makecell}
+\usepackage{array}
+
+\def\noi{\noindent}
+\def\T{{\mathbb T}}
+\def\R{{\mathbb R}}
+\def\N{{\mathbb N}}
+\def\C{{\mathbb C}}
+\def\Z{{\mathbb Z}}
+\def\P{{\mathbb P}}
+\def\E{{\mathbb E}}
+\def\Q{\mathbb{Q}}
+\def\ind{{\mathbb I}}
+
+\begin{document}
+\subsubsection*{Problem 4}
+In this problem, I looked at the analytic function
+\[
+u(x) = e^{\sin x}
+\]
+For grid sizes of $N = 4, 8, 16, 32$, I computed the $L2$ norm for the following errors:
+\begin{enumerate}
+	\item $u - P_N u$
+	\item $u' - P_N u'$
+	\item $u - I_N u$
+	\item $u' - (I_N u)'$
+\end{enumerate}
+where $P_N$ is the projection of the Fourier series onto the Fourier components from $-N/2$ to $N/2$, and $I_N$ is the interpolation onto the same components using the discrete Fourier transform. The output of the code is given on the next page. For each of the four errors, the order of accuracy increases as the number of grid points $N$ increases, suggesting that the error decays exponentially. This makes sense since our function $u$ is an analytic function. \\
+
+We confirm this result by graphing the four L2 errors against the log of the number of grid points. The plot of this is given below:
+
+\begin{figure}[H]
+\includegraphics[width=15cm]{interp.png}
+\end{figure}
+
+In all four cases, we can fit a straight line, so we confirm that the decay rate of the errors is exponential. The decay rate is given by the slopes of the best-fit lines, which is approximately -1 in all cases (see output of code below). Thus the four errors decay exponentially, and the decay constant is approximately 1.
+
+\begin{figure}[H]
+\includegraphics[width=15cm]{interpoutput.pdf}
+\end{figure}
+
+\end{document}
+
