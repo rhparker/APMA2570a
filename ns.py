@@ -120,59 +120,11 @@ def spatial_method_1(w, N):
 def spatial_method_2(w, u, v, N):
 	return -Dx(u*w, N) - Dy(v*w, N) + 1./100 * ( Dx(w, N, 2) + Dy(w, N, 2) )
 
-# def get_index(j, N):
-# 	if np.abs(j) > N/2:
-# 		return None
-# 	elif j >= 0:
-# 		return j
-# 	else:
-# 		return N + j + 1
-
-# def get_value(b, j, k, N):
-# 	if np.abs(j) > N/2 or np.abs(k) > N/2:
-# 		return 0
-# 	else:
-# 		return b[ get_index(j, N) ][ get_index(k, N) ]
-
-# def update_sum(b, n, p, N):
-# 	total = 0
-# 	for j in range(-N/2, N/2 + 1):
-# 		for k in range(-N/2, N/2 + 1):
-# 			denom = j**2 + k**2
-# 			if  denom != 0:
-# 				total += float( (k*(n-j) - j*(p-k) ) )/denom * get_value(b, j, k, N) * get_value(b, n-j, p-k, N)
-# 	return total
-
-# def update_coeffs(a, N):
-# 	b = np.zeros( (N+1, N+1), dtype=np.complex_)
-# 	coeffs = range(0, N/2 + 1) + range(-N/2, 0)
-# 	for n, nval in enumerate(coeffs):
-# 		for p, pval in enumerate(coeffs):
-# 			b[n][p] = -1./100 * (nval**2 + pval**2) * a[n][p] - update_sum(a, nval, pval, N)
-# 	return b
-
-# def update_sum(b, n, p, N):
-# 	total = 0
-# 	for j in range(-N/2, N/2 + 1):
-# 		for k in range(-N/2, N/2 + 1):
-# 			denom = j**2 + k**2
-# 			if  denom != 0:
-# 				total += ( k * n - j + p )/denom * b[j][k] * b[n-j][p-k]
-# 	return total
-
-# def update_coeffs(a, N):
-# 	b = np.zeros( (N+1, N+1), dtype=np.complex_)
-# 	for n in range(-N/2, N/2 + 1):
-# 		for p in range(-N/2, N/2 + 1):
-# 			b[n][p] = -1./100 * (n**2 + p**2) * a[n][p] - update_sum(a, n, p, N)
-# 	print b[0][0], update_sum(a, 0, 0, N)
-# 	return b
-
 def update_coeffs(b, sq, inv_sq, ij, ik):
 	a = -b * inv_sq
 	u = ik * a
 	v = -ij * a
-	return -0.01 * sq * b - convolve2d(u, ij*b, mode="valid") - convolve2d(v, ik*b, mode="valid") 
+	return -0.01 * sq * b - convolve2d(u, ij*b, mode="same") - convolve2d(v, ik*b, mode="same") 
 
 def helper_matrices(N):
 	coeffs = range(-N/2, N/2 + 1)
@@ -198,12 +150,14 @@ def trig_poly(x, y, a, N):
 # parse command line arguments
 parser = argparse.ArgumentParser()
 parser.add_argument('--gridsize', help='number of points in spatial grid', type=int, default=4)
-parser.add_argument('--endtime', help='end time for simulation', type=float, default=np.pi / 2)
+parser.add_argument('--endtime', help='end time for simulation', type=float, default=np.pi * 2)
 parser.add_argument('--show', help='display graph or animation', action="store_true")
 parser.add_argument('--second', help='use second initial condition', action="store_true")
+parser.add_argument('--galerkin', help='use Fourier Galerkin method', action="store_true")
 parser.add_argument('--skip', help='number of steps to skip when drawing animation (default 2)', type=int, default=8)
 parser.add_argument('--delay', help='delay between animation frames in ms (default 5)', type=int, default=5)
 parser.add_argument('--save', help='save figure every [SAVE] frames', type=int)
+
 
 args = parser.parse_args()
 
@@ -268,7 +222,6 @@ def iterate():
 	w = runge_kutta_4(gridsize, k, w, lambda u: spatial_method_1(u, gridsize) )
 	f_w = runge_kutta_4(gridsize, k, f_w, lambda u: update_coeffs(u, sq, inv_sq, ij, ik) )
 
-
 # initialization function
 # for now, does nothing, but keeps update from being called an extra time
 def init():
@@ -286,20 +239,20 @@ def update(step):
 	scat.set_title("Time:  "+str(step*skip*k))
 
 	# approximate solution: Fourier collocation
-	plot1 = scat.scatter(y, w[2], color=colors[0], s=marker_size * 2)
+	plot1 = scat.scatter(y, w[4], color=colors[0], s=marker_size * 2)
 	a = np.fft.fft2(w)
-	y1 = [ trig_poly(x[2], i, a, gridsize) for i in display_grid ]
+	y1 = [ trig_poly(x[4], i, a, gridsize) for i in display_grid ]
 	scat.scatter(display_grid, y1, color=colors[0], s=marker_size)
 
 	# approximate solution: Fourier Galerkin
-	y2 = [ trig_poly(x[2], i, np.fft.ifftshift(f_w), gridsize) for i in display_grid ]
+	y2 = [ trig_poly(x[4], i, np.fft.ifftshift(f_w), gridsize) for i in display_grid ]
 	scat.scatter(display_grid, y2, color=colors[1], s=marker_size)
 
 	# scat.plot(xgrid, u[0], color=colors[0])
 
 	# # exact solution
 	if not args.second:
-		plot3 = scat.scatter(y, exact_1(x[2], y, step*skip*k), color="black", s=marker_size)
+		plot3 = scat.scatter(y, exact_1(x[4], y, step*skip*k), color="black", s=marker_size)
 
 	# iterate the scheme a number of steps specified by "skip"
 	for i in xrange(skip):
@@ -321,14 +274,13 @@ if args.show:
 
 else:
 	if args.second:
-		gridsizes = [64]
+		gridsizes = [16]
 	else:
-		# gridsizes = [2, 4, 8]
-		gridsizes = [2]
+		gridsizes = [2, 4, 8]
 
 	endtime = np.pi * 2
-	# endtime = 0.1
-	cfl = 0.1
+	# endtime = 1
+	cfl = 0.02
 
 	for N in gridsizes:
 		# compute step size needed from CFL number
@@ -357,26 +309,34 @@ else:
 		else:
 			w = f(x[:,None], y[None,:])
 
-		# FFT of initial condition
-		f_w = np.fft.fft2(w)
-		f_w[0][0] = 0
+		if args.galerkin:
+			# helper matrices for Fourier Galerkin
+			sq, inv_sq, ij, ik = helper_matrices(N)
+
+			# FFT of initial condition
+			f_w = np.fft.fftshift( np.fft.fft2(w) ) / ((N+1)**2)
 
 		for i in xrange(steps):
-			# Fourier collocation
-			# # this version calculates u and v separately for each R-K substep
-			# w = runge_kutta_4(gridsize, k, w, lambda z: spatial_method_1(z, N) )
-
-			# this version calculates u and v once for all R-K steps (faster)
-			u, v = vel(w, N)
-			w = runge_kutta_4(gridsize, k, w, lambda z: spatial_method_2(z, u, v, N) )
-
 			# Fourier Galerkin
-			f_w = runge_kutta_4(gridsize, k, f_w, lambda u: update_coeffs(u, N) )
+			if args.galerkin:
+				f_w = runge_kutta_4(gridsize, k, f_w, lambda u: update_coeffs(u, sq, inv_sq, ij, ik) )
 
+			# Fourier collocation
+			else:
+				# # this version calculates u and v separately for each R-K substep
+				# w = runge_kutta_4(gridsize, k, w, lambda z: spatial_method_1(z, N) )
+
+				# this version calculates u and v once for all R-K steps (faster)
+				u, v = vel(w, N)
+				w = runge_kutta_4(gridsize, k, w, lambda z: spatial_method_2(z, u, v, N) )
+
+		# for Galerkin method, need to convert back to physical space
+		if args.galerkin:
+			w = np.real( np.fft.ifft2( np.fft.ifftshift( ((N+1)**2) * f_w) ) )
+
+		# compute error in case where exact solution is known
 		if not args.second:
 			# discrete L2 error
-			w = np.real( np.fft.ifft2(f_w) )
-
 			exact_sol = exact_1(x[:,None], y[None,:], steps * k)
 			disc_L2_error = discrete_L2norm(w - exact_sol, h)
 
