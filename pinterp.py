@@ -117,6 +117,8 @@ xmax = 1.0
 gridsizes = [ 4, 8, 16, 32, 64 ]
 errors = np.zeros( (len(gridsizes), 3 ) )
 error_grid = np.linspace(-1, 1, 1000)
+L2errors = np.zeros( (4, len(gridsizes) - 1 ) )
+Linferrors = np.zeros( (4, len(gridsizes) - 1) )
 
 # column headers for table
 
@@ -132,6 +134,8 @@ for j, gridsize in enumerate(gridsizes):
 	abs_errors = np.abs( diff(error_grid) )
 	errors[j] = [ disc_norm(diff, pts, wts), L2norm(diff, -1, 1), max(abs_errors) ]
 	print_errors(gridsize, errors[j], compute_orders(errors, j))
+L2errors[0]   = np.transpose(errors)[1][:-1]
+Linferrors[0] = np.transpose(errors)[2][:-1]
 
 # derivative
 print_header("Legendre, ||u' - (Inu)'||")
@@ -144,6 +148,8 @@ for j, gridsize in enumerate(gridsizes):
 	abs_errors = np.abs( diff(error_grid) )
 	errors[j] = [ disc_norm(diff, pts, wts), L2norm(diff, -1, 1), max(abs_errors) ]
 	print_errors(gridsize, errors[j], compute_orders(errors, j))
+L2errors[1]   = np.transpose(errors)[1][:-1]
+Linferrors[1] = np.transpose(errors)[2][:-1]
 
 # Chebyshev
 
@@ -152,11 +158,13 @@ print_header("Chebyshev, ||u - Inu||")
 for j, gridsize in enumerate(gridsizes):
 	pts, wts = np.polynomial.chebyshev.chebgauss(gridsize+1)
 	cheb_coeffs = [ cheb_coeff( f(pts), n, gridsize) for n in xrange(gridsize + 1) ]
-
 	diff = lambda x: np.polynomial.chebyshev.chebval(x, cheb_coeffs) - f(x)
 	abs_errors = np.abs( diff(error_grid) )
 	errors[j] = [ disc_norm(diff, pts, wts), L2norm(diff, -1, 1), max(abs_errors) ]
 	print_errors(gridsize, errors[j], compute_orders(errors, j))
+L2errors[2]   = np.transpose(errors)[1][:-1]
+Linferrors[2] = np.transpose(errors)[2][:-1]
+
 
 # derivative
 print_header("Chebyshev, ||u' - (Inu)'||")
@@ -169,6 +177,8 @@ for j, gridsize in enumerate(gridsizes):
 	abs_errors = np.abs( diff(error_grid) )
 	errors[j] = [ disc_norm(diff, pts, wts), L2norm(diff, -1, 1), max(abs_errors) ]
 	print_errors(gridsize, errors[j], compute_orders(errors, j))
+L2errors[3]   = np.transpose(errors)[1][:-1]
+Linferrors[3] = np.transpose(errors)[2][:-1]
 
 
 	# fig = plt.figure()
@@ -183,66 +193,43 @@ for j, gridsize in enumerate(gridsizes):
 
 	# plt.show()
 
+# set up plot
+fig = plt.figure()
+scat = fig.add_subplot(111)
+marker_size = 25
+colors = ['red', 'blue', 'green', 'orange']
+markers = ['+', '*', 'o', 's']
+labels = [ "Legendre, ||u - Inu||     ", "Legendre, ||u' - (Inu)'|| ", "Chebyshev, ||u - Inu||    ", "Chebyshev, ||u' - (Inu)'||" ]
+print
 
-# # column headers for table
-# print " grid            PnU                       PnU'                      InU                      (InU)' "
-# print "  pts  L2 error       order      L2 error       order      L2 error       order      L2 error       order"
-# print "----- -----------------------  ------------------------  ------------------------  ---------------------------"
-
-# for j, N in enumerate(gridsizes):
-# 	# construct the grid of points, and remove the final point, 
-# 	# since it is equated with the initial point
-# 	xgrid = np.linspace(xmin, xmax, N + 2)
-# 	xgrid = xgrid[:-1]
-
-# 	# fourier modes, from -N/2 to N/2
-# 	modes = range(-N/2, N/2 + 1)
-
-# 	orders = np.zeros( 4 )
-
-# 	P_coeffs  = [ fourier_coeff(f, n) for n in modes ]
-# 	dP_coeffs = [ 1j * modes[i] * P_coeffs[i] for i in xrange(len(modes)) ]
-# 	I_coeffs  = [ interp_coeff(f, xgrid, n) for n in modes ]
-# 	dI_coeffs = [ 1j * modes[i] * I_coeffs[i] for i in xrange(len(modes)) ]
-
-
-# 	P_error  = L2norm(lambda x: f(x) - trig_poly(x, P_coeffs), 0, 2*np.pi)
-# 	dP_error = L2norm(lambda x: f(x) - trig_poly(x, I_coeffs), 0, 2*np.pi)
-# 	I_error  = L2norm(lambda x: df(x) - trig_poly(x, dP_coeffs), 0, 2*np.pi)
-# 	dI_error = L2norm(lambda x: df(x) - trig_poly(x, dI_coeffs), 0, 2*np.pi)
-
-# 	L2errors[j] = [ P_error, dP_error, I_error, dI_error ]
-
-# 	# compute orders
-# 	if j > 0:
-# 		for i in xrange(4):
-# 			orders[i] = np.log2( L2errors[j-1][i]/L2errors[j][i] )
- 
-# 	display_data = np.hstack( zip(L2errors[j], orders) )
-
-# 	print "{:4d}   {:10e}   {:8.5f}   {:10e}   {:8.5f}   {:10e}   {:8.5f}   {:10e}   {:8.5f}".format( N, *display_data )
-
-# # set up plot
-# fig = plt.figure()
-# scat = fig.add_subplot(111)
-# marker_size = 25
-# colors = ['red', 'blue', 'green', 'orange']
-# markers = ['+', '*', 'o', 's']
-# labels = [ "||U - PnU||    ", "||U' - PnU'||  ", "||U - InU||    ", "||U' - (InU)'||" ]
-# print
-
-# # error plot: log of L2 error vs grid size
-# logL2errors = np.transpose( np.log( L2errors ) )
+# # error plot 1: log of L2 error vs grid size
+# logL2errors = np.log( L2errors )
 
 # for j in xrange(4):
-# 	plot1 = scat.scatter( gridsizes, logL2errors[j], color=colors[j], label=labels[j], s=marker_size, marker=markers[j])
-# 	poly = np.polyfit( gridsizes, logL2errors[j], 1)
+# 	plot1 = scat.scatter( gridsizes[:-1], logL2errors[j], color=colors[j], label=labels[j], s=marker_size, marker=markers[j])
+# 	poly = np.polyfit( gridsizes[:-1], logL2errors[j], 1)
 # 	print labels[j], "   slope of line: ", poly[0]
-# 	plt.plot( gridsizes, np.poly1d( poly )(gridsizes), color=colors[j] )
+# 	plt.plot( gridsizes[:-1], np.poly1d( poly )(gridsizes[:-1]), color=colors[j] )
 # plt.xlabel('grid size (N)')
 # plt.ylabel('log L2 error')
-# plt.title('Log of L2 error vs grid size')
+# plt.title('Log of continuous L2 error vs grid size')
 # plt.legend()
 # plt.show()
+
+# error plot 1: log of Linfinity error vs grid size
+logLinferrors = np.log( Linferrors )
+
+for j in xrange(4):
+	plot1 = scat.scatter( gridsizes[:-1], logLinferrors[j], color=colors[j], label=labels[j], s=marker_size, marker=markers[j])
+	poly = np.polyfit( gridsizes[:-1], logLinferrors[j], 1)
+	print labels[j], "   slope of line: ", poly[0]
+	plt.plot( gridsizes[:-1], np.poly1d( poly )(gridsizes[:-1]), color=colors[j] )
+plt.xlabel('grid size (N)')
+plt.ylabel('log L infinity error')
+plt.title('Log of L infinity error vs grid size')
+plt.legend()
+plt.show()
+
+
 
 
