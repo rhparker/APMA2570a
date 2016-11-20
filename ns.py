@@ -274,15 +274,31 @@ if args.show:
 
 else:
 	if args.second:
-		gridsizes = [16]
+		gridsizes = [ 32 ]
 	else:
-		gridsizes = [2, 4, 8]
+		gridsizes = [ 2, 4, 8, 16, 32 ]
+
+	errors = np.zeros( ( len(gridsizes), 3 ) )
+	orders = np.zeros( 3 )
+
+	if not args.second:
+		# column headers for table
+		if args.galerkin:
+			print "Fourier-Galerkin"
+			print
+		else:
+			print "Fourier-collocation"
+			print
+
+		print " grid      discrete L2                continuous L2            L-infinity         "
+		print "  pts   error          order       error         order      error          order     "
+		print "----- ------------------------  ------------------------  ------------------------ "
 
 	endtime = np.pi * 2
 	# endtime = 1
-	cfl = 0.02
+	cfl = 0.1
 
-	for N in gridsizes:
+	for n, N in enumerate(gridsizes):
 		# compute step size needed from CFL number
 		h = (xmax - xmin) / (N + 1)
 		k = cfl * h
@@ -351,22 +367,27 @@ else:
 			integrand = lambda x, y: ( exact_1(x, y, steps*k) - trig_poly(x, y, f_coeffs, N) )**2
 			L2_error = np.sqrt( dblquad(integrand, xmin, xmax, lambda x: xmin, lambda x: xmax) )[0]
 
-			print N, disc_L2_error, L2_error, Linf_error
+			errors[n] = [disc_L2_error, L2_error, Linf_error]
+
+			# compute orders
+			if n > 0:
+				for i in range(3):
+					orders[i] = np.log2( errors[n-1][i]/errors[n][i] )
+ 
+			display_data = np.hstack( zip( errors[n], orders) )
+
+			print "{:4d}   {:10e}   {:8.5f}   {:10e}   {:8.5f}   {:10e}   {:8.5f}".format( N, *display_data )
 
 			levels = np.linspace(-2, 2, 101)
 			plt.contourf(LX, LY, interp, levels=levels)
+			scat.set_title("First initial condition, "+str(N)+" gridpoints")
 
 		else:
 			levels = np.linspace(-5, 5, 101)
-			plt.contourf(X, Y, w, levels=levels)
+			scat.set_title("Second initial condition, "+str(N)+" gridpoints")
+			plt.contourf(X, Y, np.transpose(w), levels=levels)
 		
 		plt.colorbar()
 		plt.show()
-
-		
-
-
-
-
 
 
